@@ -1,8 +1,13 @@
-from helper import obtener_post
+from project.helper import obtener_post
+from project.gui import App 
 
+# Esto obtiene los datos
 post = obtener_post()
+print("Primeros 5 posts: ")
+for p in post[:5]:
+    print(f"ID:{p['id']} - Titulo:{p['title']}")
 
-print("primeros 5 posts: ")
-
-for post in post [:5]:
-    print(f"ID:{post['id']} - Titulo:{post['title']}")
+# Esto lanza la interfaz gráfica
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
