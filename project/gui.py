@@ -2,15 +2,40 @@ import customtkinter as ctk
 from datetime import datetime
 
 # librerias que conectan con los otros archivos 
-from project.logic import validar_movimiento
+from project.logic import validar_movimiento, formatear_con_puntos, limpiar_formato_moneda
 from project.data_base_manager import guardar_movimiento_csv
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         
+        # --- 1. AQUÍ DEFINES LA VARIABLE DE CONTROL ---
+        # Debe estar después de super() y antes de usarla en el Entry
+        self.monto_var = ctk.StringVar()
+        
+        # Aquí le dices que "vigile" los cambios y llame a la función de los puntos
+        self.monto_var.trace_add("write", self.aplicar_mascara_monto)
+
         self.title("Zennit - Gestor Financiero")
         self.geometry("400x500")
+
+        # ... (otros widgets como fecha y concepto) ...
+
+        # --- 2. AQUÍ LA CONECTAS AL ENTRY ---
+        self.label_monto = ctk.CTkLabel(self, text="Monto:")
+        self.label_monto.pack(pady=(10, 0))
+        
+        # Es CRUCIAL que uses 'textvariable=self.monto_var'
+        self.entry_monto = ctk.CTkEntry(
+            self, 
+            textvariable=self.monto_var, 
+            placeholder_text="0"
+        )
+        self.entry_monto.pack(pady=5)
+
+    # --- LAS FUNCIONES VAN FUERA DEL __init__ PERO DENTRO DE LA CLASE ---
+    def aplicar_mascara_monto(self, *args):
+        # ... (código de los puntos) ...
 
         # --- Título ---
         self.label_titulo = ctk.CTkLabel(self, text="Nuevo Movimiento", font=("Arial", 20))
@@ -39,27 +64,37 @@ class App(ctk.CTk):
         self.boton_guardar = ctk.CTkButton(self, text="Guardar Gasto", command=self.guardar_datos)
         self.boton_guardar.pack(pady=30)
 
-    def guardar_datos(self):
-        # 1. Obtener datos de los cuadritos de texto
+def aplicar_mascara_monto(self, *args):
+        texto_actual = self.monto_var.get()
+        
+        # Filtramos para que solo pasen números
+        solo_numeros = "".join(filter(str.isdigit, texto_actual))
+        
+        # Aplicamos los puntos de miles usando la función de logic.py
+        formateado = formatear_con_puntos(solo_numeros)
+        
+        # Solo actualizamos si el texto cambió (para evitar bucles infinitos)
+        if texto_actual != formateado:
+            self.monto_var.set(formateado)
+
+def guardar_datos(self):
         fecha = self.entry_fecha.get()
         concepto = self.entry_concepto.get()
-        monto = self.entry_monto.get()
         
-        # 2. Validar con la función de logic.py
-        es_valido, resultado = validar_movimiento(monto, concepto)
+        # LIMPIAMOS los puntos antes de procesar
+        monto_con_puntos = self.monto_var.get()
+        monto_limpio = limpiar_formato_moneda(monto_con_puntos)
+        
+        es_valido, resultado = validar_movimiento(monto_limpio, concepto)
         
         if es_valido:
-            # 3. Guardar con la función de data_base_manager.py
             guardar_movimiento_csv(fecha, concepto, resultado)
-            
-            print(f"✅ Guardado con éxito: {concepto} por ${resultado}")
-            
-            # Limpiar para el siguiente ingreso
+            print(f"✅ Guardado: {concepto} - ${resultado}")
+            # Limpiamos los campos
+            self.monto_var.set("") 
             self.entry_concepto.delete(0, 'end')
-            self.entry_monto.delete(0, 'end')
         else:
-            # Mostrar error en la consola por ahora
-            print(f"❌ Error de validación: {resultado}")
+            print(f"❌ Error: {resultado}")
 
 if __name__ == "__main__":
     app = App()
