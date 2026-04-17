@@ -70,3 +70,31 @@ def guardar_movimiento_csv(fecha, concepto, monto, tipo, usuario):
         
         # Guardamos el concepto también limpio de espacios extras
         writer.writerow([fecha, concepto.strip(), monto, tipo]) 
+
+def modificar_password_csv(usuario, nueva_password):
+    """Sobrescribe la contraseña del usuario en el archivo principal"""
+    import csv
+    import os
+    
+    ruta = os.path.join("data", "usuarios.csv")
+    temp_data = []
+    actualizado = False
+
+    # 1. Leemos todo y modificamos en memoria
+    with open(ruta, mode="r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        for fila in reader:
+            if len(fila) >= 2:
+                if fila[0].strip() == usuario.strip():
+                    temp_data.append([usuario.strip(), nueva_password.strip()])
+                    actualizado = True
+                else:
+                    temp_data.append(fila)
+
+    # 2. Volvemos a escribir el archivo con el cambio
+    if actualizado:
+        with open(ruta, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(temp_data)
+        return True
+    return False        

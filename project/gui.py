@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from datetime import datetime
+from tkcalendar import Calendar
 
 # Importamos las piezas de los otros archivos (Asegúrate de que existan)
 from project.logic import (
@@ -11,7 +12,8 @@ from project.logic import (
 from project.data_base_manager import (
     guardar_movimiento_csv, 
     verificar_usuario, 
-    registrar_usuario_csv
+    registrar_usuario_csv,
+    modificar_password_csv
 )
 
 class App(ctk.CTk):
@@ -111,15 +113,27 @@ class App(ctk.CTk):
             widget.destroy()
 
         # Menú Lateral
+        
+        # --- MENÚ LATERAL
         self.menu_lateral = ctk.CTkFrame(self.main_container, width=220, corner_radius=0)
         self.menu_lateral.pack(side="left", fill="y")
         
         ctk.CTkLabel(self.menu_lateral, text="ZENNIT PRO", font=("Arial", 20, "bold")).pack(pady=25)
         ctk.CTkLabel(self.menu_lateral, text=f"Hola, {usuario}", font=("Arial", 14)).pack(pady=(0, 20))
 
-        ctk.CTkButton(self.menu_lateral, text="📊 Panel Principal", fg_color="#2b719e", anchor="w").pack(fill="x", padx=15, pady=5)
-        ctk.CTkButton(self.menu_lateral, text="🚪 Cerrar Sesión", fg_color="#444", command=self.mostrar_login).pack(side="bottom", pady=25, padx=15)
+        # Botón Panel Principal (Ahora con el comando corregido)
+        ctk.CTkButton(self.menu_lateral, text="📊 Panel Principal", fg_color="#2b719e", anchor="w", command=self.dibujar_elementos_panel).pack(fill="x", padx=15, pady=5)
 
+        # Botón Calendario
+        ctk.CTkButton(self.menu_lateral, text="📅 Calendario", fg_color="transparent", anchor="w", command=self.mostrar_calendario).pack(fill="x", padx=15, pady=5)
+
+        # Botón Ajustes
+        ctk.CTkButton(self.menu_lateral, text="⚙️ Ajustes y Perfil", fg_color="transparent", anchor="w", command=self.mostrar_ajustes_perfil).pack(fill="x", padx=15, pady=5)
+
+        # Botón Cerrar Sesión
+        ctk.CTkButton(self.menu_lateral, text="🚪 Cerrar Sesión", fg_color="#444", command=self.mostrar_login).pack(side="bottom", pady=25, padx=15)
+        
+        
         # Área Principal
         self.area_principal = ctk.CTkFrame(self.main_container, corner_radius=15)
         self.area_principal.pack(side="right", fill="both", expand=True, padx=20, pady=20)
@@ -127,6 +141,12 @@ class App(ctk.CTk):
         self.dibujar_elementos_panel()
 
     def dibujar_elementos_panel(self):
+        
+        
+        for widget in self.area_principal.winfo_children():
+            widget.destroy()
+       
+       
         self.frame_form = ctk.CTkFrame(self.area_principal)
         self.frame_form.pack(fill="x", padx=10, pady=10)
 
@@ -191,4 +211,122 @@ class App(ctk.CTk):
             solo_numeros = "".join(filter(str.isdigit, texto))
             formateado = formatear_con_puntos(solo_numeros)
             if texto != formateado:
-                self.monto_var.set(formateado)     
+                self.monto_var.set(formateado)
+    
+    def mostrar_ajustes_perfil(self):
+        """Pantalla para gestionar el perfil y la apariencia"""
+        for widget in self.area_principal.winfo_children():
+            widget.destroy()
+
+        # Título
+        ctk.CTkLabel(self.area_principal, text="Configuración de Perfil", font=("Arial", 24, "bold")).pack(pady=20)
+
+        # --- SECCIÓN PERFIL ---
+        frame_perfil = ctk.CTkFrame(self.area_principal)
+        frame_perfil.pack(fill="x", padx=40, pady=10)
+
+        ctk.CTkLabel(frame_perfil, text="Información de Usuario", font=("Arial", 16, "bold")).pack(pady=10, padx=20, anchor="w")
+        ctk.CTkLabel(frame_perfil, text=f"Nombre de usuario: {self.usuario_actual}").pack(pady=5, padx=20, anchor="w")
+        
+        # --- SECCIÓN SEGURIDAD ---
+        frame_pass = ctk.CTkFrame(self.area_principal)
+        frame_pass.pack(fill="x", padx=40, pady=10)
+
+        ctk.CTkLabel(frame_pass, text="Cambiar Contraseña", font=("Arial", 16, "bold")).pack(pady=10, padx=20, anchor="w")
+        
+        self.entry_nueva_pass = ctk.CTkEntry(frame_pass, placeholder_text="Nueva contraseña", show="*", width=200)
+        self.entry_nueva_pass.pack(side="left", padx=20, pady=20)
+        
+        ctk.CTkButton(frame_pass, text="Actualizar Clave", width=120, command=self.actualizar_password).pack(side="left", padx=10)
+
+        # --- SECCIÓN APARIENCIA ---
+        frame_tema = ctk.CTkFrame(self.area_principal)
+        frame_tema.pack(fill="x", padx=40, pady=10)
+
+        ctk.CTkLabel(frame_tema, text="Apariencia", font=("Arial", 16, "bold")).pack(pady=10, padx=20, anchor="w")
+        
+        self.tema_var = ctk.StringVar(value="Oscuro")
+        ctk.CTkOptionMenu(frame_tema, values=["System", "Light", "Dark"], 
+                          command=self.cambiar_apariencia).pack(pady=10, padx=20, anchor="w")
+
+        self.label_feedback_ajustes = ctk.CTkLabel(self.area_principal, text="")
+        self.label_feedback_ajustes.pack(pady=20)
+
+    def cambiar_apariencia(self, nuevo_tema):
+        """Cambia el modo de color de la app al vuelo"""
+        ctk.set_appearance_mode(nuevo_tema)
+
+    def actualizar_password(self):
+        """Lógica para cambiar la clave del usuario actual"""
+        nueva_p = self.entry_nueva_pass.get().strip()
+        if nueva_p:
+            # Aquí llamaremos a una función del data_base_manager
+            exito = modificar_password_csv(self.usuario_actual, nueva_p)
+            if exito:
+                self.label_feedback_ajustes.configure(text="✅ Contraseña actualizada", text_color="#2FA572")
+                self.entry_nueva_pass.delete(0, 'end')
+            else:
+                self.label_feedback_ajustes.configure(text="❌ Error al actualizar", text_color="#eb5e5e")
+        else:
+            self.label_feedback_ajustes.configure(text="⚠ Escribe una contraseña válida", text_color="#eb5e5e")
+    
+    def mostrar_calendario(self):
+        """Pantalla con calendario para ver gastos por día"""
+        for widget in self.area_principal.winfo_children():
+            widget.destroy()
+
+        ctk.CTkLabel(self.area_principal, text="Agenda Financiera", font=("Arial", 24, "bold")).pack(pady=20)
+
+        # Contenedor para el calendario
+        frame_cal = ctk.CTkFrame(self.area_principal)
+        frame_cal.pack(pady=10, padx=20, fill="both", expand=True)
+
+        # Configuramos el calendario
+        # locale='es_ES' lo pone en español, date_pattern define el formato de fecha
+        self.cal = Calendar(frame_cal, selectmode='day', 
+                           locale='es_ES', date_pattern='dd/mm/yyyy',
+                           background="#2b719e", foreground="white", 
+                           selectbackground="#2FA572")
+        self.cal.pack(pady=20, padx=20)
+
+        ctk.CTkButton(frame_cal, text="Consultar este día", 
+                      command=self.consultar_gastos_fecha, width=200).pack(pady=10)
+
+        # ScrollableFrame para mostrar los resultados del día sin amontonar
+        self.frame_resumen_cal = ctk.CTkScrollableFrame(frame_cal, label_text="Detalle del día", height=200)
+        self.frame_resumen_cal.pack(fill="x", padx=40, pady=20)
+
+    def consultar_gastos_fecha(self):
+        """Busca movimientos en el archivo del usuario que coincidan con la fecha del calendario"""
+        fecha_sel = self.cal.get_date()
+        
+        # Limpiamos el frame de resultados anterior
+        for widget in self.frame_resumen_cal.winfo_children():
+            widget.destroy()
+            
+        # Obtenemos los datos del usuario actual
+        movs, _, _, _ = obtener_resumen_finanzas(self.usuario_actual)
+        
+        # Filtramos por fecha seleccionada
+        gastos_dia = [m for m in movs if m['Fecha'] == fecha_sel]
+        
+        if gastos_dia:
+            total_neto = 0
+            for g in gastos_dia:
+                es_ingreso = g['Tipo'] == "Ingreso"
+                color = "#2FA572" if es_ingreso else "#eb5e5e"
+                simbolo = "+" if es_ingreso else "-"
+                monto = float(g['Monto'])
+                
+                texto_gasto = f"• {g['Concepto']}: {simbolo}${monto:,.2f}"
+                ctk.CTkLabel(self.frame_resumen_cal, text=texto_gasto, text_color=color).pack(anchor="w")
+                
+                total_neto += monto if es_ingreso else -monto
+            
+            # Mostrar balance final del día
+            color_balance = "#2FA572" if total_neto >= 0 else "#eb5e5e"
+            ctk.CTkLabel(self.frame_resumen_cal, text=f"\nBalance del día: ${total_neto:,.2f}", 
+                         font=("Arial", 14, "bold"), text_color=color_balance).pack(pady=5)
+        else:
+            ctk.CTkLabel(self.frame_resumen_cal, text=f"No hay registros para el {fecha_sel}", 
+                         text_color="gray").pack(pady=10)                         
