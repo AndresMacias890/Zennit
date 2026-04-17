@@ -1,41 +1,66 @@
-# project/logic.py
+import csv
+import os
 
-def validar_movimiento(monto, concepto):
-    """
-    Verifica que el monto sea un número válido y que el concepto no esté vacío.
-    Retorna (True, monto_float) si es válido, o (False, mensaje_error) si no.
-    """
-    if not concepto.strip():
-        return False, "El concepto no puede estar vacío."
-
+def validar_movimiento(monto_str, concepto):
+    """Limpia espacios y valida que los datos sean correctos"""
+    # Quitamos espacios al concepto
+    concepto_limpio = concepto.strip()
+    
+    if not concepto_limpio:
+        return False, "El concepto no puede estar vacío"
+    
     try:
-        monto_limpio = float(monto.replace(",", ".")) 
-        if monto_limpio <= 0:
-            return False, "El monto debe ser mayor a cero."
-        return True, monto_limpio
+        # Quitamos espacios al monto por si acaso
+        monto_f = float(monto_str.strip())
+        if monto_f <= 0:
+            return False, "El monto debe ser mayor a 0"
+        return True, monto_f
     except ValueError:
-        return False, "El monto debe ser un número válido."
+        return False, "Monto no válido"
 
-def calcular_balance(lista_movimientos):
-    # Aquí suma todos los montos 
-    return sum(movimiento['monto'] for movimiento in lista_movimientos)
+def obtener_resumen_finanzas(usuario):
+    """Lee solo el archivo CSV del usuario actual"""
+    # Limpiamos el nombre del usuario para buscar el archivo correcto
+    nombre_archivo = f"gastos_{usuario.strip()}.csv"
+    ruta = os.path.join("data", nombre_archivo)
+    
+    movimientos = []
+    ingresos = 0
+    gastos = 0
+    
+    if not os.path.exists(ruta):
+        return movimientos, 0, 0, 0
+        
+    with open(ruta, mode="r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for fila in reader:
+            # Limpiamos posibles espacios en los datos leídos
+            monto = float(fila['Monto'])
+            tipo = fila['Tipo'].strip()
+            
+            movimientos.append(fila)
+            
+            if tipo == "Ingreso":
+                ingresos += monto
+            else:
+                gastos += monto
+                
+    balance = ingresos - gastos
+    return movimientos, ingresos, gastos, balance
 
-def limpiar_formato_moneda(texto_con_puntos):
-    """Convierte '1.250,50' o '1.250' en un float de Python"""
-    # Quitamos los puntos de miles
-    limpio = texto_con_puntos.replace(".", "")
-    # Cambiamos la coma decimal por punto si existiera
-    limpio = limpio.replace(",", ".")
-    return limpio
-
-def formatear_con_puntos(valor):
-    """Convierte un string numérico en uno con puntos de miles"""
+def formatear_con_puntos(numero_str):
+    """Añade puntos de miles mientras el usuario escribe"""
+    if not numero_str:
+        return ""
     try:
-        # Quitamos cualquier cosa que no sea número para evitar errores
-        solo_numeros = "".join(filter(str.isdigit, valor))
-        if not solo_numeros:
-            return ""
-        # Formateamos con puntos de miles: 1000 -> 1.000
-        return f"{int(solo_numeros):,}".replace(",", ".")
+        # Elimina cualquier cosa que no sea dígito por seguridad
+        solo_numeros = "".join(filter(str.isdigit, numero_str))
+        if not solo_numeros: return ""
+        # Formatea con puntos: 1.000.000
+        return "{:,}".format(int(solo_numeros)).replace(",", ".")
     except:
-        return valor
+        return numero_str
+
+def limpiar_formato_moneda(monto_formateado):
+    """Quita los puntos para poder convertir a float"""
+    return monto_formateado.replace(".", "").strip()
